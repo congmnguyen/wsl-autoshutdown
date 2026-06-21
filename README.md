@@ -55,9 +55,18 @@ seconds.
 
 - **Polling interval** is 8 s (edit `Start-Sleep -Seconds 8` in the `.ps1`). That's
   the maximum delay between closing Windows Terminal and the VM shutting down.
-- If you run WSL **without** Windows Terminal (VS Code Remote, `wsl` from
-  PowerShell/CMD), closing Windows Terminal will still shut the VM down. Fine if
-  Windows Terminal is your primary entry point; otherwise widen the process check.
+- **VS Code Remote-WSL is protected.** Before shutting down, the watcher probes
+  the distro for a running `vscode-server` process; if VS Code is still attached,
+  it skips the shutdown and re-checks on the next loop. So closing Windows
+  Terminal won't drop your VS Code session — the VM only dies once *both* are
+  gone. (The probe only runs in the moment right after Windows Terminal closes,
+  while the VM is still up, so it never boots a stopped VM back to life.)
+- If you run WSL **only** from VS Code and never open Windows Terminal, the
+  watcher never triggers (it keys off the Windows Terminal close). Closing VS
+  Code alone won't shut the VM down; run `wsl --shutdown` manually, or widen the
+  trigger to also treat `vscode-server` as a primary entry point.
+- Other non-Terminal entry points (`wsl` from PowerShell/CMD) are **not**
+  protected — closing Windows Terminal will still shut the VM down under them.
 - **Disable** by deleting the `.vbs` from your Startup folder and rebooting (or end
   the `powershell.exe` watcher in Task Manager).
 - **Manual shutdown** any time: `wsl --shutdown`.
