@@ -7,12 +7,25 @@
 # (tien trinh `vscode-server` ben trong WSL). Neu con -> hoan, de khong giet
 # session VS Code khi ban chi dong Windows Terminal.
 
+function Test-WslRunning {
+    $out = @(& wsl.exe --list --running --quiet 2>$null)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not query running WSL distros"
+    }
+
+    return @($out | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }).Count -gt 0
+}
+
 function Test-VSCodeWsl {
-    # $true neu VS Code Remote-WSL dang gan vao distro.
-    # CHI goi khi VM dang chay (sau khi WT vua dong) -> wsl.exe -e se BOOT lai
-    # VM neu no da tat, nen tuyet doi khong probe trong vong lap thuong.
     $out = & wsl.exe -e pgrep -f vscode-server 2>$null
-    return -not [string]::IsNullOrWhiteSpace($out)
+    if ($LASTEXITCODE -eq 0) {
+        return $true
+    }
+    if ($LASTEXITCODE -eq 1) {
+        return $false
+    }
+
+    throw "Could not probe VS Code Remote-WSL"
 }
 
 $seen = $false
@@ -22,13 +35,23 @@ while ($true) {
         $seen = $true
     }
     elseif ($seen) {
-        # Vua dong het Windows Terminal. VM con song -> probe an toan.
-        if (Test-VSCodeWsl) {
-            # VS Code van bam WSL -> giu $seen, kiem lai vong sau.
+        try {
+            if (-not (Test-WslRunning)) {
+                # WSL da tat san; khong probe de tranh boot lai VM.
+                $seen = $false
+            }
+            elseif (Test-VSCodeWsl) {
+                # VS Code van bam WSL -> giu $seen, kiem lai vong sau.
+            }
+            else {
+                & wsl.exe --shutdown
+                if ($LASTEXITCODE -eq 0) {
+                    $seen = $false
+                }
+            }
         }
-        else {
-            & wsl.exe --shutdown
-            $seen = $false
+        catch {
+            # Khong shutdown khi khong xac dinh duoc trang thai; thu lai vong sau.
         }
     }
 }

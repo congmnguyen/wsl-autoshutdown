@@ -59,8 +59,9 @@ seconds.
   the distro for a running `vscode-server` process; if VS Code is still attached,
   it skips the shutdown and re-checks on the next loop. So closing Windows
   Terminal won't drop your VS Code session — the VM only dies once *both* are
-  gone. (The probe only runs in the moment right after Windows Terminal closes,
-  while the VM is still up, so it never boots a stopped VM back to life.)
+  gone. The watcher confirms that WSL is still running before probing, so it
+  never boots a stopped VM back to life. If either status check fails, it keeps
+  WSL running and retries instead of risking an incorrect shutdown.
 - If you run WSL **only** from VS Code and never open Windows Terminal, the
   watcher never triggers (it keys off the Windows Terminal close). Closing VS
   Code alone won't shut the VM down; run `wsl --shutdown` manually, or widen the
